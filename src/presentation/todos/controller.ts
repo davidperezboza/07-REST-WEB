@@ -38,7 +38,12 @@ export class TodosController{
 
         (todo) 
             ? res.json(todo)
-            : res.status(404).json({ message: `Todo not found with id ${id} nott found` });	
+            : res.status(404).json({ message: `Todo not found with id ${id} not found` });	
     }
+
+    public createTodo = (req: Request, res: Response) => {
+        const body = req.body;
+        res.json(body);
+    };
 
 };
