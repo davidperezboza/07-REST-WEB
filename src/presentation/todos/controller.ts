@@ -1,6 +1,6 @@
 import { Request, Response } from "express"
 import { prisma } from "../../data/postgres";
-import { CreateTodoDto } from "../../domain/dtos";
+import { CreateTodoDto, UpdateTodoDto } from "../../domain/dtos";
 
 export class TodosController{
     //*DI
@@ -63,46 +63,35 @@ export class TodosController{
         }
     };
 
-    public updateTodo = async(req: Request, res: Response) => {
+    public updateTodo = async( req: Request, res: Response ) => {
         const id = +req.params.id;
-
-        if(isNaN(id)) {
-            res.status(400).json({ error: 'ID argument is not a number' });
+        const [error, updateTodoDto] = UpdateTodoDto.create({...req.body, id});
+        if ( error ) {
+            res.status( 400 ).json( { error } );
             return;
-        };
+        }
+        
         try {
-            const todoAnt =  await prisma.todo.findUnique({
-                where: {
-                    id,
-                }
+            const todo = await prisma.todo.findFirst({
+                where: { id }
             });
-
-            if(!todoAnt){
-                res.status(404).json({ message: `Todo with id ${id} not found` });
+          
+            if ( !todo ) {
+                res.status( 404 ).json( { error: `Todo with id ${id} not found` } );
                 return;
             };
-
-            const {text, completedAt} = req.body;
-
-            const todoUpd = await prisma.todo.update({
-                where: {
-                    id,
-                },
-                data: {
-                    text: text || todoAnt.text,
-                    completedAt: (completedAt === "null")
-                        ? null
-                        : new Date(completedAt || todoAnt.completedAt),
-                },
+        
+            const updatedTodo = await prisma.todo.update({
+              where: { id },
+              data: updateTodoDto!.values
             });
-
-            res.json(todoUpd);
-
+        
+            res.json( updatedTodo );
         } catch (error) {
             console.error(error);
             res.status(500).json({ error: 'Internal server error' });
-            
         }
+    
     };
 
     public deleteTodo = async (req: Request, res: Response) => {
