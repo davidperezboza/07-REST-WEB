@@ -1,7 +1,6 @@
-import { Request, Response } from "express"
-import { prisma } from "../../data/postgres";
-import { CreateTodoDto, UpdateTodoDto } from "../../domain/dtos";
-import { TodoRepository } from "../../domain";
+import { Request, Response } from 'express'
+import { CreateTodoDto, UpdateTodoDto } from '../../domain/dtos';
+import { CreateTodo, GetTodo, GetTodos, TodoRepository } from '../../domain';
 
 export class TodosController{
     //*DI
@@ -9,21 +8,20 @@ export class TodosController{
         private readonly todoRepository: TodoRepository,
     ){}
 
-    public getTodos = async (req: Request, res: Response) =>  {
-       const todos = await this.todoRepository.getAll();
-
-       res.json(todos);
+    public getTodos = (req: Request, res: Response) =>  {
+       new GetTodos(this.todoRepository)
+        .execute()
+        .then(todos => res.json(todos))
+        .catch(error => res.status(404).json(error));
     }
 
-    public getTodoById = async (req: Request, res: Response) => {
+    public getTodoById = (req: Request, res: Response) => {
         const id = +req.params.id;
 
-        try {
-            const todo = await this.todoRepository.findById(id);
-            res.json(todo);
-        } catch (error) {
-            res.status(400).json({error})
-        }
+        new GetTodo(this.todoRepository)
+            .execute(id)
+            .then(todo => res.json(todo))
+            .catch(error => res.status(404).json({error}));
     }
 
      public createTodo = async(req: Request, res: Response) => {
@@ -34,8 +32,10 @@ export class TodosController{
             return;
         };
 
-        const todo = await this.todoRepository.create(createTodoDto!);
-        res.json(todo);
+        new CreateTodo(this.todoRepository)
+            .execute(createTodoDto!)
+            .then(todo => res.json(todo))
+            .catch(error => res.status(404).json({error}));
     };
 
     public updateTodo = async( req: Request, res: Response ) => {
