@@ -1,45 +1,28 @@
 import { Request, Response } from "express"
 import { prisma } from "../../data/postgres";
 import { CreateTodoDto, UpdateTodoDto } from "../../domain/dtos";
+import { TodoRepository } from "../../domain";
 
 export class TodosController{
     //*DI
-    constructor(){}
+    constructor(
+        private readonly todoRepository: TodoRepository,
+    ){}
 
     public getTodos = async (req: Request, res: Response) =>  {
-        try {
-            const todos = await prisma.todo.findMany()
-            res.json(todos);
-        } catch (error) {
-            console.error(error);
-            res.status(500).json({ error: 'Internal server error' });
-        }
+       const todos = await this.todoRepository.getAll();
+
+       res.json(todos);
     }
 
     public getTodoById = async (req: Request, res: Response) => {
         const id = +req.params.id;
 
-        if(isNaN(id)) {
-            res.status(400).json({ message: 'ID argument is not a number' });
-            return;
-        };
-
         try {
-            const todo = await prisma.todo.findUnique({
-                where: {
-                    id,
-                }
-            });
-
-            if(!todo){
-                res.status(404).json({ message: `Todo with id ${id} not found` });
-                return;
-            };
-
+            const todo = await this.todoRepository.findById(id);
             res.json(todo);
         } catch (error) {
-            console.error(error);
-            res.status(500).json({ error: 'Internal server error' });   
+            res.status(400).json({error})
         }
     }
 
@@ -51,16 +34,8 @@ export class TodosController{
             return;
         };
 
-        try {
-            const todo = await prisma.todo.create({
-                data: createTodoDto!
-            });
-    
-            res.json(todo);
-        } catch (error) {
-            console.error(error);
-            res.status(500).json({ error: 'Internal server error' });
-        }
+        const todo = await this.todoRepository.create(createTodoDto!);
+        res.json(todo);
     };
 
     public updateTodo = async( req: Request, res: Response ) => {
@@ -71,26 +46,8 @@ export class TodosController{
             return;
         }
         
-        try {
-            const todo = await prisma.todo.findFirst({
-                where: { id }
-            });
-          
-            if ( !todo ) {
-                res.status( 404 ).json( { error: `Todo with id ${id} not found` } );
-                return;
-            };
-        
-            const updatedTodo = await prisma.todo.update({
-              where: { id },
-              data: updateTodoDto!.values
-            });
-        
-            res.json( updatedTodo );
-        } catch (error) {
-            console.error(error);
-            res.status(500).json({ error: 'Internal server error' });
-        }
+        const updateTodo = await this.todoRepository.updateById(updateTodoDto!);
+        res.json(updateTodo);
     
     };
 
@@ -102,31 +59,8 @@ export class TodosController{
             return;
         };
 
-        try {
-            const todo = await prisma.todo.findUnique({
-                where: {
-                    id,
-                }
-            });
-
-            if(!todo){
-                res.status(404).json({ message: `Todo with id ${id} not found` });
-                return;
-            };
-
-            await prisma.todo.delete({
-                where: {
-                    id,
-                }
-            });
-
-            res.json({ message: `Todo with id ${id} was deleted` });
-            
-        } catch (error) {
-            console.error(error);
-            res.status(500).json({ error: 'Internal server error' });
-        }
-
+        const deletedTodo = await this.todoRepository.deleteById(id);
+        res.json(deletedTodo);
     };
 
 };
